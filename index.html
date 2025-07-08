@@ -70,12 +70,10 @@
 
     let isScratching = false;
     let lastPoint = null;
-    let scratchedPixels = 0;
     let totalPixels = 0;
-    let revealThreshold = 0.5; // 50%
-    let brushRadius = 80; // Increased brush size
+    let revealThreshold = 0.5;
+    let brushRadius = 80;
 
-    // Load the scratch image
     const img = new Image();
     img.src = 'scratch.jpg';
 
@@ -87,9 +85,7 @@
     function resizeCanvas() {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
-      if (img.complete) {
-        drawScratchImage();
-      }
+      if (img.complete) drawScratchImage();
       totalPixels = canvas.width * canvas.height;
     }
 
@@ -98,29 +94,20 @@
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     }
 
-    window.addEventListener('resize', () => {
-      resizeCanvas();
-    });
+    window.addEventListener('resize', resizeCanvas);
 
     function getTouchPos(e) {
-      let rect = canvas.getBoundingClientRect();
-      if (e.touches) {
-        return {
-          x: e.touches[0].clientX - rect.left,
-          y: e.touches[0].clientY - rect.top
-        };
-      } else {
-        return {
-          x: e.clientX - rect.left,
-          y: e.clientY - rect.top
-        };
-      }
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: (e.touches ? e.touches[0].clientX : e.clientX) - rect.left,
+        y: (e.touches ? e.touches[0].clientY : e.clientY) - rect.top
+      };
     }
 
     function scratchLine(start, end) {
       const dist = Math.hypot(end.x - start.x, end.y - start.y);
       const angle = Math.atan2(end.y - start.y, end.x - start.x);
-      for (let i = 0; i <= dist; i += 1) {
+      for (let i = 0; i <= dist; i++) {
         const x = start.x + Math.cos(angle) * i;
         const y = start.y + Math.sin(angle) * i;
         eraseCircle(x, y);
@@ -130,30 +117,39 @@
     function eraseCircle(x, y) {
       ctx.globalCompositeOperation = 'destination-out';
       ctx.beginPath();
-      ctx.arc(x, y, brushRadius, 0, Math.PI * 2, false);
+      ctx.arc(x, y, brushRadius, 0, 2 * Math.PI);
       ctx.fill();
     }
 
     function checkScratchProgress() {
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const pixels = imageData.data;
-      let transparentPixels = 0;
+      const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      let transparent = 0;
       for (let i = 3; i < pixels.length; i += 4) {
-        if (pixels[i] === 0) transparentPixels++;
+        if (pixels[i] === 0) transparent++;
       }
-      const progress = transparentPixels / totalPixels;
+      const progress = transparent / totalPixels;
       if (progress > revealThreshold) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         canvas.style.display = 'none';
       }
     }
 
-    // Scratch Events
+    // Events
     canvas.addEventListener('mousedown', e => {
       isScratching = true;
       lastPoint = getTouchPos(e);
       eraseCircle(lastPoint.x, lastPoint.y);
     });
+
+    canvas.addEventListener('mousemove', e => {
+      if (!isScratching) return;
+      const currentPoint = getTouchPos(e);
+      scratchLine(lastPoint, currentPoint);
+      lastPoint = currentPoint;
+      checkScratchProgress();
+    });
+
+    canvas.addEventListener('mouseup', () => isScratching = false);
 
     canvas.addEventListener('touchstart', e => {
       isScratching = true;
@@ -162,55 +158,36 @@
       e.preventDefault();
     }, { passive: false });
 
-    canvas.addEventListener('mousemove', e => {
-      if (!isScratching) return;
-      let currentPoint = getTouchPos(e);
-      scratchLine(lastPoint, currentPoint);
-      lastPoint = currentPoint;
-      checkScratchProgress();
-    });
-
     canvas.addEventListener('touchmove', e => {
       if (!isScratching) return;
-      let currentPoint = getTouchPos(e);
+      const currentPoint = getTouchPos(e);
       scratchLine(lastPoint, currentPoint);
       lastPoint = currentPoint;
       checkScratchProgress();
       e.preventDefault();
     }, { passive: false });
 
-    canvas.addEventListener('mouseup', () => {
-      isScratching = false;
-    });
-
-    canvas.addEventListener('touchend', () => {
-      isScratching = false;
-    });
+    canvas.addEventListener('touchend', () => isScratching = false);
 
     function openFullscreen(elem) {
       if (elem.requestFullscreen) {
         elem.requestFullscreen();
       } else if (elem.webkitRequestFullscreen) {
-        elem.webkitRequestFullscreen(); // Safari
+        elem.webkitRequestFullscreen();
       } else if (elem.msRequestFullscreen) {
-        elem.msRequestFullscreen(); // IE11
+        elem.msRequestFullscreen();
       }
-      setTimeout(() => {
-        window.scrollTo(0, 1); // Hide URL bar on mobile
-      }, 1000);
+      setTimeout(() => window.scrollTo(0, 1), 1000);
     }
 
-    // Start Camera and Go Fullscreen
     startBtn.addEventListener('click', () => {
-      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
         .then(stream => {
           video.srcObject = stream;
           startBtn.style.display = 'none';
           openFullscreen(document.documentElement);
         })
-        .catch(err => {
-          alert('Camera access denied or not available.');
-        });
+        .catch(err => alert('Camera access denied or not available.'));
     });
   </script>
 </body>
