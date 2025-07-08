@@ -59,7 +59,7 @@
   <div id="container">
     <video id="video" autoplay playsinline></video>
     <canvas id="scratchCanvas"></canvas>
-    <button id="startBtn">Start Camera</button>
+    <button id="startBtn">Go to Fullscreen</button>
   </div>
 
   <script>
@@ -73,6 +73,7 @@
     let totalPixels = 0;
     let revealThreshold = 0.5;
     let brushRadius = 80;
+    let scratchEnabled = false; // <-- NEW: lock scratching until fullscreen
 
     const img = new Image();
     img.src = 'scratch.jpg';
@@ -134,15 +135,16 @@
       }
     }
 
-    // Events
+    // Scratch Event Listeners (only active if scratchEnabled)
     canvas.addEventListener('mousedown', e => {
+      if (!scratchEnabled) return;
       isScratching = true;
       lastPoint = getTouchPos(e);
       eraseCircle(lastPoint.x, lastPoint.y);
     });
 
     canvas.addEventListener('mousemove', e => {
-      if (!isScratching) return;
+      if (!isScratching || !scratchEnabled) return;
       const currentPoint = getTouchPos(e);
       scratchLine(lastPoint, currentPoint);
       lastPoint = currentPoint;
@@ -152,6 +154,7 @@
     canvas.addEventListener('mouseup', () => isScratching = false);
 
     canvas.addEventListener('touchstart', e => {
+      if (!scratchEnabled) return;
       isScratching = true;
       lastPoint = getTouchPos(e);
       eraseCircle(lastPoint.x, lastPoint.y);
@@ -159,7 +162,7 @@
     }, { passive: false });
 
     canvas.addEventListener('touchmove', e => {
-      if (!isScratching) return;
+      if (!isScratching || !scratchEnabled) return;
       const currentPoint = getTouchPos(e);
       scratchLine(lastPoint, currentPoint);
       lastPoint = currentPoint;
@@ -186,6 +189,7 @@
           video.srcObject = stream;
           startBtn.style.display = 'none';
           openFullscreen(document.documentElement);
+          scratchEnabled = true; // 🔓 Allow scratching AFTER fullscreen
         })
         .catch(err => alert('Camera access denied or not available.'));
     });
