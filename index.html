@@ -1,203 +1,176 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Scratch to Reveal Camera</title>
-<style>
-  html, body {
-    margin: 0; padding: 0; height: 100%; overflow: hidden;
-    font-family: Arial, sans-serif;
-    background: black;
-  }
-  #container {
-    position: relative;
-    width: 100vw;
-    height: 100vh;
-    overflow: hidden;
-  }
-  video {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    object-fit: cover;
-    z-index: 0;
-    background: black;
-  }
-  #scratchCanvas {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    z-index: 2;
-    touch-action: none;
-  }
-  #startBtn {
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 3;
-    padding: 15px 30px;
-    font-size: 1.5rem;
-    cursor: pointer;
-    border: none;
-    border-radius: 8px;
-    background-color: #007bff;
-    color: white;
-    user-select: none;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Scratch to Reveal Camera</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      height: 100%;
+      background: black;
+    }
+
+    #app {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    video {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 10;
+    }
+
+    #fullscreen-btn {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 20;
+      padding: 15px 30px;
+      font-size: 20px;
+      background-color: #000000aa;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    #fullscreen-btn.hidden {
+      display: none;
+    }
+  </style>
 </head>
 <body>
-<div id="container">
-  <video id="video" autoplay playsinline></video>
-  <canvas id="scratchCanvas"></canvas>
-  <button id="startBtn">Start Camera</button>
-</div>
+  <div id="app">
+    <video id="video" autoplay playsinline></video>
+    <canvas id="canvas"></canvas>
+    <button id="fullscreen-btn">Start Experience</button>
+  </div>
 
-<script>
-  const startBtn = document.getElementById('startBtn');
-  const video = document.getElementById('video');
-  const canvas = document.getElementById('scratchCanvas');
-  const ctx = canvas.getContext('2d');
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const video = document.getElementById('video');
+    const btn = document.getElementById('fullscreen-btn');
+    let isDrawing = false;
+    const brushSize = 60;
+    let scratchedPixels = 0;
+    let totalPixels = 0;
+    let imageLoaded = false;
 
-  let isScratching = false;
-  let lastPoint = null;
-  let scratchedPixels = 0;
-  let totalPixels = 0;
-  let revealThreshold = 0.5; // 50%
-  let brushRadius = 60;
-
-  // Load the scratch image
-  const img = new Image();
-  img.src = 'scratch.jpg';
-
-  img.onload = () => {
-    resizeCanvas();
-    drawScratchImage();
-  };
-
-  // Resize canvas to fill screen
-  function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    if (img.complete) {
-      drawScratchImage();
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      if (imageLoaded) drawImage();
     }
-    totalPixels = canvas.width * canvas.height;
-  }
 
-  window.addEventListener('resize', () => {
-    resizeCanvas();
-  });
+    window.addEventListener('resize', resizeCanvas);
 
-  function drawScratchImage() {
-    // Draw the scratch image stretched to fill canvas
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-  }
-
-  // Scratch logic
-  function getTouchPos(e) {
-    let rect = canvas.getBoundingClientRect();
-    if (e.touches) {
-      return {
-        x: e.touches[0].clientX - rect.left,
-        y: e.touches[0].clientY - rect.top
-      };
-    } else {
-      return {
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top
+    function drawImage() {
+      const img = new Image();
+      img.src = 'scratch.jpg';
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        totalPixels = imageData.data.length / 4;
+        imageLoaded = true;
       };
     }
-  }
 
-  function scratchLine(start, end) {
-    const dist = Math.hypot(end.x - start.x, end.y - start.y);
-    const angle = Math.atan2(end.y - start.y, end.x - start.x);
-
-    for(let i = 0; i <= dist; i += 1) {
-      const x = start.x + Math.cos(angle) * i;
-      const y = start.y + Math.sin(angle) * i;
-      eraseCircle(x, y);
+    function getPosition(e) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: (e.touches ? e.touches[0].clientX : e.clientX) - rect.left,
+        y: (e.touches ? e.touches[0].clientY : e.clientY) - rect.top
+      };
     }
-  }
 
-  function eraseCircle(x, y) {
-    ctx.globalCompositeOperation = 'destination-out';
-    ctx.beginPath();
-    ctx.arc(x, y, brushRadius, 0, Math.PI * 2, false);
-    ctx.fill();
-  }
-
-  function checkScratchProgress() {
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const pixels = imageData.data;
-    let transparentPixels = 0;
-
-    for(let i = 3; i < pixels.length; i += 4) {
-      if(pixels[i] === 0) transparentPixels++;
+    function erase(x, y) {
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.beginPath();
+      ctx.arc(x, y, brushSize, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
     }
-    const progress = transparentPixels / totalPixels;
-    // console.log('Scratch progress:', (progress*100).toFixed(2) + '%');
 
-    if(progress > revealThreshold) {
-      // Fully clear canvas and remove scratch layer
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      canvas.style.display = 'none';
+    function calculateScratchedPercent() {
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      let cleared = 0;
+      for (let i = 3; i < imageData.length; i += 4) {
+        if (imageData[i] === 0) cleared++;
+      }
+      return (cleared / totalPixels) * 100;
     }
-  }
 
-  // Scratch event handlers
-  canvas.addEventListener('mousedown', e => {
-    isScratching = true;
-    lastPoint = getTouchPos(e);
-    eraseCircle(lastPoint.x, lastPoint.y);
-  });
+    function startDrawing(e) {
+      isDrawing = true;
+      draw(e);
+    }
 
-  canvas.addEventListener('touchstart', e => {
-    isScratching = true;
-    lastPoint = getTouchPos(e);
-    eraseCircle(lastPoint.x, lastPoint.y);
-    e.preventDefault();
-  }, {passive:false});
+    function endDrawing() {
+      isDrawing = false;
+      const scratched = calculateScratchedPercent();
+      if (scratched > 50) {
+        canvas.style.display = 'none';
+      }
+    }
 
-  canvas.addEventListener('mousemove', e => {
-    if(!isScratching) return;
-    let currentPoint = getTouchPos(e);
-    scratchLine(lastPoint, currentPoint);
-    lastPoint = currentPoint;
-    checkScratchProgress();
-  });
+    function draw(e) {
+      if (!isDrawing) return;
+      const { x, y } = getPosition(e);
+      erase(x, y);
+    }
 
-  canvas.addEventListener('touchmove', e => {
-    if(!isScratching) return;
-    let currentPoint = getTouchPos(e);
-    scratchLine(lastPoint, currentPoint);
-    lastPoint = currentPoint;
-    checkScratchProgress();
-    e.preventDefault();
-  }, {passive:false});
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mouseup', endDrawing);
+    canvas.addEventListener('mousemove', draw);
 
-  canvas.addEventListener('mouseup', () => {
-    isScratching = false;
-  });
+    canvas.addEventListener('touchstart', startDrawing);
+    canvas.addEventListener('touchend', endDrawing);
+    canvas.addEventListener('touchmove', draw);
 
-  canvas.addEventListener('touchend', () => {
-    isScratching = false;
-  });
+    function openFullscreen(elem) {
+      if (elem.requestFullscreen) {
+        elem.requestFullscreen();
+      } else if (elem.webkitRequestFullscreen) {
+        elem.webkitRequestFullscreen();
+      } else if (elem.msRequestFullscreen) {
+        elem.msRequestFullscreen();
+      }
+      setTimeout(() => window.scrollTo(0, 1), 500);
+    }
 
-  // Start camera on button click
-  startBtn.addEventListener('click', () => {
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-      .then(stream => {
+    btn.addEventListener('click', async () => {
+      btn.classList.add('hidden');
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { exact: "environment" } },
+          audio: false
+        });
         video.srcObject = stream;
-        startBtn.style.display = 'none'; // hide button after starting camera
-      })
-      .catch(err => {
-        alert('Camera access denied or not available.');
-      });
-  });
-</script>
+      } catch (err) {
+        alert('Error accessing back camera: ' + err.message);
+        return;
+      }
+
+      openFullscreen(document.documentElement);
+      resizeCanvas();
+      drawImage();
+    });
+  </script>
 </body>
 </html>
