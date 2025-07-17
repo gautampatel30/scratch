@@ -43,16 +43,12 @@
     }
 
     #startBtn {
-      position: absolute;
-      bottom: 4vw;
-      right: 4vw;
-      z-index: 3;
-      width: 14vw;
-      height: 14vw;
-      max-width: 70px;
-      max-height: 70px;
-      min-width: 44px;
-      min-height: 44px;
+      position: fixed;
+      bottom: 5%;
+      right: 5%;
+      z-index: 999;
+      width: 60px;
+      height: 60px;
       background-color: black;
       border: none;
       border-radius: 50%;
@@ -60,19 +56,18 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 1vw;
-      transition: box-shadow 0.3s ease;
+      padding: 10px;
       touch-action: manipulation;
-    }
-
-    #startBtn:hover {
-      box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
     }
 
     #startBtn img {
       width: 60%;
       height: 60%;
       object-fit: contain;
+    }
+
+    #startBtn:hover {
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
     }
   </style>
 </head>
