@@ -44,11 +44,15 @@
 
     #startBtn {
       position: absolute;
-      bottom: 20px;
-      right: 20px;
+      bottom: 4vw;
+      right: 4vw;
       z-index: 3;
-      width: 60px;
-      height: 60px;
+      width: 14vw;
+      height: 14vw;
+      max-width: 70px;
+      max-height: 70px;
+      min-width: 44px;
+      min-height: 44px;
       background-color: black;
       border: none;
       border-radius: 50%;
@@ -56,8 +60,9 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 10px;
+      padding: 1vw;
       transition: box-shadow 0.3s ease;
+      touch-action: manipulation;
     }
 
     #startBtn:hover {
@@ -65,8 +70,9 @@
     }
 
     #startBtn img {
-      width: 32px;
-      height: 32px;
+      width: 60%;
+      height: 60%;
+      object-fit: contain;
     }
   </style>
 </head>
@@ -210,7 +216,6 @@
         .catch(err => alert('Camera access denied or not available.'));
     });
 
-    // 👇 Fullscreen change handler to bring back the button if user exits fullscreen
     document.addEventListener('fullscreenchange', () => {
       const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
       if (!isFullscreen) {
