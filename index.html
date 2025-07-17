@@ -111,28 +111,7 @@
 
     function drawScratchImage() {
       ctx.globalCompositeOperation = 'source-over';
-
-      const canvasAspect = canvas.width / canvas.height;
-      const imageAspect = img.width / img.height;
-
-      let drawWidth, drawHeight, offsetX, offsetY;
-
-      if (canvasAspect > imageAspect) {
-        // Canvas is wider than image
-        drawWidth = canvas.width;
-        drawHeight = canvas.width / imageAspect;
-        offsetX = 0;
-        offsetY = (canvas.height - drawHeight) / 2;
-      } else {
-        // Canvas is taller than image
-        drawHeight = canvas.height;
-        drawWidth = canvas.height * imageAspect;
-        offsetY = 0;
-        offsetX = (canvas.width - drawWidth) / 2;
-      }
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
-      ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     }
 
     window.addEventListener('resize', resizeCanvas);
