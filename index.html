@@ -13,12 +13,14 @@
       font-family: Arial, sans-serif;
       background: black;
     }
+
     #container {
       position: relative;
       width: 100vw;
       height: 100vh;
       overflow: hidden;
     }
+
     video {
       position: absolute;
       top: 0;
@@ -29,6 +31,7 @@
       z-index: 0;
       background: black;
     }
+
     #scratchCanvas {
       position: absolute;
       top: 0;
@@ -38,20 +41,32 @@
       z-index: 2;
       touch-action: none;
     }
+
     #startBtn {
       position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
+      bottom: 20px;
+      right: 20px;
       z-index: 3;
-      padding: 15px 30px;
-      font-size: 1.5rem;
-      cursor: pointer;
+      width: 60px;
+      height: 60px;
+      background-color: black;
       border: none;
-      border-radius: 8px;
-      background-color: #007bff;
-      color: white;
-      user-select: none;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+      transition: box-shadow 0.3s ease;
+    }
+
+    #startBtn:hover {
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+    }
+
+    #startBtn img {
+      width: 32px;
+      height: 32px;
     }
   </style>
 </head>
@@ -59,7 +74,9 @@
   <div id="container">
     <video id="video" autoplay playsinline></video>
     <canvas id="scratchCanvas"></canvas>
-    <button id="startBtn">Go to Fullscreen</button>
+    <button id="startBtn" aria-label="Go Fullscreen">
+      <img src="full-screen-button.png" alt="Fullscreen" />
+    </button>
   </div>
 
   <script>
@@ -73,7 +90,7 @@
     let totalPixels = 0;
     let revealThreshold = 0.5;
     let brushRadius = 80;
-    let scratchEnabled = false; // <-- NEW: lock scratching until fullscreen
+    let scratchEnabled = false;
 
     const img = new Image();
     img.src = 'scratch.jpg';
@@ -135,7 +152,6 @@
       }
     }
 
-    // Scratch Event Listeners (only active if scratchEnabled)
     canvas.addEventListener('mousedown', e => {
       if (!scratchEnabled) return;
       isScratching = true;
@@ -189,9 +205,20 @@
           video.srcObject = stream;
           startBtn.style.display = 'none';
           openFullscreen(document.documentElement);
-          scratchEnabled = true; // 🔓 Allow scratching AFTER fullscreen
+          scratchEnabled = true;
         })
         .catch(err => alert('Camera access denied or not available.'));
+    });
+
+    // 👇 Fullscreen change handler to bring back the button if user exits fullscreen
+    document.addEventListener('fullscreenchange', () => {
+      const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
+      if (!isFullscreen) {
+        startBtn.style.display = 'flex';
+        scratchEnabled = false;
+        canvas.style.display = 'block';
+        drawScratchImage();
+      }
     });
   </script>
 </body>
