@@ -19,18 +19,6 @@
       width: 100vw;
       height: 100vh;
       overflow: hidden;
-      transition: all 0.3s ease;
-    }
-
-    /* Fake fullscreen mode */
-    #container.fullscreen-fake {
-      position: fixed !important;
-      top: 0 !important;
-      left: 0 !important;
-      width: 100vw !important;
-      height: 100vh !important;
-      z-index: 10000 !important;
-      background: black;
     }
 
     video {
@@ -214,57 +202,13 @@
       setTimeout(() => window.scrollTo(0, 1), 1000);
     }
 
-    // Detect iPad (including iPadOS 13+)
-    const isIPad = (() => {
-      const ua = navigator.userAgent;
-      const isIPadOS = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
-      return (/iPad/.test(ua) || isIPadOS);
-    })();
-
-    // For iPad: implement fake fullscreen + 5 taps to exit fullscreen
-    let tapCount = 0;
-    const maxTapsToExit = 5;
-
-    function enterFakeFullscreen() {
-      container.classList.add('fullscreen-fake');
-      startBtn.style.display = 'none';
-      scratchEnabled = true;
-      tapCount = 0;
-    }
-
-    function exitFakeFullscreen() {
-      container.classList.remove('fullscreen-fake');
-      startBtn.style.display = 'flex';
-      scratchEnabled = false;
-      canvas.style.display = 'block';
-      drawScratchImage();
-      tapCount = 0;
-    }
-
-    function handleTapToExit() {
-      tapCount++;
-      if (tapCount >= maxTapsToExit) {
-        exitFakeFullscreen();
-      }
-    }
-
     startBtn.addEventListener('click', () => {
       navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
         .then(stream => {
           video.srcObject = stream;
-
-          if (isIPad) {
-            // Use fake fullscreen on iPad to avoid system "X"
-            enterFakeFullscreen();
-
-            // Listen for taps on container to exit fake fullscreen
-            container.addEventListener('click', handleTapToExit);
-          } else {
-            // Use native fullscreen on other devices
-            openFullscreen(document.documentElement);
-            startBtn.style.display = 'none';
-            scratchEnabled = true;
-          }
+          startBtn.style.display = 'none';
+          openFullscreen(document.documentElement);
+          scratchEnabled = true;
         })
         .catch(err => alert('Camera access denied or not available.'));
     });
@@ -279,6 +223,15 @@
       }
     });
 
+    // ESC key handling - show start button and reset canvas if ESC pressed
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' || e.key === 'Esc') {
+        startBtn.style.display = 'flex';
+        scratchEnabled = false;
+        canvas.style.display = 'block';
+        drawScratchImage();
+      }
+    });
   </script>
 </body>
 </html>
