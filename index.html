@@ -19,6 +19,18 @@
       width: 100vw;
       height: 100vh;
       overflow: hidden;
+      transition: all 0.3s ease;
+    }
+
+    /* Fake fullscreen mode */
+    #container.fullscreen-fake {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      z-index: 10000 !important;
+      background: black;
     }
 
     video {
@@ -70,21 +82,6 @@
     #startBtn:hover {
       box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
     }
-
-    #exitBtn {
-      position: fixed;
-      top: 1.5%;
-      left: 1.5%;
-      background: rgba(0, 0, 0, 0.5);
-      color: white;
-      padding: 8px 14px;
-      border: none;
-      border-radius: 6px;
-      font-size: 14px;
-      cursor: pointer;
-      display: none;
-      z-index: 1000;
-    }
   </style>
 </head>
 <body>
@@ -94,7 +91,6 @@
     <button id="startBtn" aria-label="Go Fullscreen">
       <img src="full-screen-button.png" alt="Fullscreen" />
     </button>
-    <button id="exitBtn">Exit</button>
   </div>
 
   <script>
@@ -102,7 +98,7 @@
     const video = document.getElementById('video');
     const canvas = document.getElementById('scratchCanvas');
     const ctx = canvas.getContext('2d');
-    const exitBtn = document.getElementById('exitBtn');
+    const container = document.getElementById('container');
 
     let isScratching = false;
     let lastPoint = null;
@@ -110,7 +106,6 @@
     let revealThreshold = 0.5;
     let brushRadius = 80;
     let scratchEnabled = false;
-    let tapCount = 0;
 
     const img = new Image();
     img.src = 'scratch.jpg';
@@ -219,13 +214,37 @@
       setTimeout(() => window.scrollTo(0, 1), 1000);
     }
 
-    function closeFullscreen() {
-      if (document.exitFullscreen) {
-        document.exitFullscreen();
-      } else if (document.webkitExitFullscreen) {
-        document.webkitExitFullscreen();
-      } else if (document.msExitFullscreen) {
-        document.msExitFullscreen();
+    // Detect iPad (including iPadOS 13+)
+    const isIPad = (() => {
+      const ua = navigator.userAgent;
+      const isIPadOS = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+      return (/iPad/.test(ua) || isIPadOS);
+    })();
+
+    // For iPad: implement fake fullscreen + 5 taps to exit fullscreen
+    let tapCount = 0;
+    const maxTapsToExit = 5;
+
+    function enterFakeFullscreen() {
+      container.classList.add('fullscreen-fake');
+      startBtn.style.display = 'none';
+      scratchEnabled = true;
+      tapCount = 0;
+    }
+
+    function exitFakeFullscreen() {
+      container.classList.remove('fullscreen-fake');
+      startBtn.style.display = 'flex';
+      scratchEnabled = false;
+      canvas.style.display = 'block';
+      drawScratchImage();
+      tapCount = 0;
+    }
+
+    function handleTapToExit() {
+      tapCount++;
+      if (tapCount >= maxTapsToExit) {
+        exitFakeFullscreen();
       }
     }
 
@@ -233,37 +252,33 @@
       navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
         .then(stream => {
           video.srcObject = stream;
-          startBtn.style.display = 'none';
-          openFullscreen(document.documentElement);
-          scratchEnabled = true;
+
+          if (isIPad) {
+            // Use fake fullscreen on iPad to avoid system "X"
+            enterFakeFullscreen();
+
+            // Listen for taps on container to exit fake fullscreen
+            container.addEventListener('click', handleTapToExit);
+          } else {
+            // Use native fullscreen on other devices
+            openFullscreen(document.documentElement);
+            startBtn.style.display = 'none';
+            scratchEnabled = true;
+          }
         })
         .catch(err => alert('Camera access denied or not available.'));
     });
 
-    exitBtn.addEventListener('click', () => {
-      video.srcObject?.getTracks().forEach(track => track.stop());
-      closeFullscreen();
-      location.reload(); // reload app state
-    });
-
-    // Count taps to show Exit button
-    document.addEventListener('click', () => {
-      tapCount++;
-      if (tapCount >= 5) {
-        exitBtn.style.display = 'block';
-      }
-    });
-
-    // If user manually exits fullscreen (e.g., ESC key), reset
     document.addEventListener('fullscreenchange', () => {
-      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+      const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
+      if (!isFullscreen) {
         startBtn.style.display = 'flex';
         scratchEnabled = false;
         canvas.style.display = 'block';
         drawScratchImage();
-        video.srcObject?.getTracks().forEach(track => track.stop());
       }
     });
+
   </script>
 </body>
 </html>
