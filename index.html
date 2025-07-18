@@ -50,7 +50,7 @@
       z-index: 999;
       width: 45px;
       height: 45px;
-      background-color: black;
+      background-color: transparent;
       border: none;
       border-radius: 50%;
       cursor: pointer;
@@ -70,6 +70,21 @@
     #startBtn:hover {
       box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
     }
+
+    #exitBtn {
+      position: fixed;
+      top: 1.5%;
+      left: 1.5%;
+      background: rgba(0, 0, 0, 0.5);
+      color: white;
+      padding: 8px 14px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      display: none;
+      z-index: 1000;
+    }
   </style>
 </head>
 <body>
@@ -79,6 +94,7 @@
     <button id="startBtn" aria-label="Go Fullscreen">
       <img src="full-screen-button.png" alt="Fullscreen" />
     </button>
+    <button id="exitBtn">Exit</button>
   </div>
 
   <script>
@@ -86,6 +102,7 @@
     const video = document.getElementById('video');
     const canvas = document.getElementById('scratchCanvas');
     const ctx = canvas.getContext('2d');
+    const exitBtn = document.getElementById('exitBtn');
 
     let isScratching = false;
     let lastPoint = null;
@@ -93,6 +110,7 @@
     let revealThreshold = 0.5;
     let brushRadius = 80;
     let scratchEnabled = false;
+    let tapCount = 0;
 
     const img = new Image();
     img.src = 'scratch.jpg';
@@ -201,6 +219,16 @@
       setTimeout(() => window.scrollTo(0, 1), 1000);
     }
 
+    function closeFullscreen() {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+      } else if (document.msExitFullscreen) {
+        document.msExitFullscreen();
+      }
+    }
+
     startBtn.addEventListener('click', () => {
       navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
         .then(stream => {
@@ -212,13 +240,28 @@
         .catch(err => alert('Camera access denied or not available.'));
     });
 
+    exitBtn.addEventListener('click', () => {
+      video.srcObject?.getTracks().forEach(track => track.stop());
+      closeFullscreen();
+      location.reload(); // reload app state
+    });
+
+    // Count taps to show Exit button
+    document.addEventListener('click', () => {
+      tapCount++;
+      if (tapCount >= 5) {
+        exitBtn.style.display = 'block';
+      }
+    });
+
+    // If user manually exits fullscreen (e.g., ESC key), reset
     document.addEventListener('fullscreenchange', () => {
-      const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
-      if (!isFullscreen) {
+      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
         startBtn.style.display = 'flex';
         scratchEnabled = false;
         canvas.style.display = 'block';
         drawScratchImage();
+        video.srcObject?.getTracks().forEach(track => track.stop());
       }
     });
   </script>
